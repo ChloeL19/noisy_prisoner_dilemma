@@ -5,7 +5,7 @@ import random
 # pip install -e prisoner_dilemma_gym
 
 class PrisonerDilemma(gym.Env):
-    def __init__(self, enemy_agent=None, max_num_rounds=100, noise=0.05):
+    def __init__(self, enemy_agent=None, action_map=None, payoff=None, max_num_rounds=100, noise=0.05):
         '''
         Initialize the payoff matrix of the prisoner's dilemma game.
         CC: (3,3), CD: (0,5), DC: (5,0), DD:(0,0)
@@ -43,16 +43,8 @@ class PrisonerDilemma(gym.Env):
         self.true_state = None # string version of previous state
         self.done = False
         self.info = {}
-        self.action_map = {
-            0: 'D',
-            1: 'C'
-        }
-        self.payoff = {
-            'CC': (3,3),
-            'CD': (0,5),
-            'DC': (5,0),
-            'DD': (0,0)
-        }
+        self.action_map = action_map
+        self.payoff = payoff
 
     def step(self, action):
         '''
@@ -83,24 +75,29 @@ class PrisonerDilemma(gym.Env):
         self.noisy_state_p1 = self.action_map[self.noisy_numeric_state_p1[0]] + self.action_map[self.noisy_numeric_state_p1[1]]
         self.noisy_state_p2 = self.action_map[self.noisy_numeric_state_p2[0]] + self.action_map[self.noisy_numeric_state_p2[1]]
 
+        try:
         # update the internal state of the enemy agent
-        self.enemy_agent.update_state(prev_action_profile=self.noisy_state_p2)
+            self.enemy_agent.update_state(prev_action_profile=self.noisy_state_p2)
         # maybe should also update my current agent here lol
-
+        except:
+            import pdb; pdb.set_trace();
         # calculate the reward based on the non-noisy actions
         payoff_tuple = self.payoff[self.true_state]
 
         # update the info
         self.info['p1_noisy_action_profile'] = self.noisy_state_p1
         self.info['p2_noisy_action_profile'] = self.noisy_state_p2
+        self.info['p1_noisy_action_num_profile'] = self.noisy_numeric_state_p1
+        self.info['p2_noisy_action_num_profile'] = self.noisy_numeric_state_p2
         #self.info['payoff'] = payoff_tuple
 
         self.curr_round += 1
         # return (noisy) state for player 1, reward, done, info
-        return self.noisy_state_p1, payoff_tuple, self.done, self.info
+        return self.noisy_numeric_state_p1, payoff_tuple, self.done, self.info
 
     def reset(self):
         self.curr_round = 0
+        self.done = False
         pass
         # return state, info (?)
 
