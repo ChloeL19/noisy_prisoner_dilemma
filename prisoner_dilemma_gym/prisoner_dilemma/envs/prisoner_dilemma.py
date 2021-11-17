@@ -107,7 +107,7 @@ class PrisonerDilemma(gym.Env):
 
 
 
-
+# computational complexity of finding best response to automata --> NP-Hard problem
 
 ## Microsoft Interview Notes
 # growth mindset: how could I improve the situation?
