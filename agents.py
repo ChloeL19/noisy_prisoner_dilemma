@@ -93,16 +93,11 @@ class AutomatonAgent():
 class RL_agent():
     def __init__(self, initial_coop):
         '''
-        Use a SARSA approach for learning this strategy.
-        Design and train a function that takes in previous probability of 
-        cooperating and other player's action and outputs 
-        new probability of cooperating.
-
-        Actually I think I'm using a policy gradient approach here.
+        Policy gradient approach. Or something like it.
 
         Variables
         - self.strategy: simple keras model for learning a function
-            for outputing probability of cooperating
+            for outputing action to take
         - initial_coop: initial probability of cooperating
         '''
         self.prev_coop = initial_coop
@@ -110,9 +105,6 @@ class RL_agent():
         lr = 1e-6
         self.strategy = tf.keras.models.Sequential([
             tf.keras.layers.Dense(units=1, input_shape = input_shape, activation='tanh'), # maybe try another layer
-            # tf.keras.layers.BatchNormalization(),
-            # consider adding a convolutional layer here
-            #tf.keras.layers.Dense(units=1, activation='linear')
 	    ])
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
     
