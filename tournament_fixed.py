@@ -91,6 +91,11 @@ def main(args):
         else:
             print "Scores: %d, %d" % (s1, s2)
 
+    # CHLOE IDEA: specially load and append the RL agent
+    # to the end of the agents dictionary
+    # name will be RL1
+    # would be cool to investigate adding multiple RLs later
+
     scores = dict()
     names = agents.keys()
     for k in agents.keys():

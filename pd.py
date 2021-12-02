@@ -129,6 +129,8 @@ class Player:
             return 'C'
         else:
             return 'D'
+        # takes the output of neural network, samples from the prob to give action
+        # the get_action function
 
     def react(self, result):
         """ Transition based on the joint action (possibly noisy) """
@@ -141,6 +143,7 @@ class Player:
             self.current_state = cur.on_dc
         elif result == DD:
             self.current_state = cur.on_dd
+        # update the state of RL agent
     
 def readplayer(id, f=sys.stdin):
     lines = []
