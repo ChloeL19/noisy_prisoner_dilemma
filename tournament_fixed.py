@@ -15,7 +15,7 @@ from pd import play, readplayer
 import pd
 
 def usage():
-    print USAGE_MSG
+    print(USAGE_MSG)
     sys.exit()
 
 do_redact = False
@@ -52,13 +52,13 @@ def main(args):
             html = True
         if "redact" in args:
             do_redact = True
-    except Exception, e:
-        print "Bad argument: ", e
+    except Exception as e:
+        print("Bad argument: {}".format(e))
         usage()
 
     def ifhtml(msg):
         if html:
-            print msg
+            print(msg)
 
     ifhtml("<center>")
     ifhtml("<h1>All Pairs Tournament</h1>")
@@ -76,9 +76,9 @@ def main(args):
                 n += 1
                 name = os.path.basename(fname[:-6])
                 agents[name] = p
-            except Exception, e:
+            except Exception as e:
                 ifhtml("<p>")
-                print "Couldn't read %s. Skipping. Error: %s" % (fname, e)
+                print("Couldn't read %s. Skipping. Error: %s" % (fname, e))
 
     def header(n1, n2):
         n1 = redact(n1)
@@ -87,9 +87,15 @@ def main(args):
 
     def log_scores(s1, s2):
         if html:
-            print "%d, %d<br>" % (s1, s2)
+            print("%d, %d<br>" % (s1, s2))
         else:
-            print "Scores: %d, %d" % (s1, s2)
+            print("Scores: %d, %d" % (s1, s2))
+    
+    def cmp(a, b):
+        '''
+        Re-defining for Python 3
+        '''
+        return (a > b) - (a < b)
 
     # CHLOE IDEA: specially load and append the RL agent
     # to the end of the agents dictionary
@@ -97,12 +103,14 @@ def main(args):
     # would be cool to investigate adding multiple RLs later
 
     scores = dict()
-    names = agents.keys()
+    #names = agents.keys()
+    names = [n for n in agents.keys()]
     for k in agents.keys():
         p = agents[k]
         #print "key=", k,"\nvalues=\n", p.getStrategy(),"\n\n"
     for i in range(len(names)):
         for j in range(i+1,len(names)):
+            #import pdb; pdb.set_trace();
             n1 = names[i]
             n2 = names[j]
             header(n1,n2)
@@ -117,19 +125,19 @@ def main(args):
 
     results = scores.items()
     # Sort in descending order by score
-    results.sort(lambda (n1,s1), (n2,s2): cmp(s2,s1))
+    results = sorted([r for r in results], key=lambda res: res[1], reverse=True)
     # n - 1 matches, each with iters * numrounds rounds.
     norm = float(iters * numrounds * (len(names)-1))
     if html:
-        print "<hr><h1>Results</h1>"
-        print "<h3>Average scores per round:</h3>"
-        print "<table>"
-        print "\n".join("<tr><td>%s</td> <td>%.2f</td><td>%s</td></tr>" % (redact(name),score / norm, agents[name].getStrategy()) for (name,score) in results)
-        print "</table>"
+        print ("<hr><h1>Results</h1>")
+        print ("<h3>Average scores per round:</h3>")
+        print ("<table>")
+        print ("\n".join("<tr><td>%s</td> <td>%.2f</td><td>%s</td></tr>" % (redact(name),score / norm, agents[name].getStrategy()) for (name,score) in results))
+        print ("</table>")
     else:
-        print "Average scores per round:"
-        print "\n".join("%s: %.2f" % (
-            redact(name),score / norm) for (name,score) in results)
+        print("Average scores per round:")
+        print ("\n".join("%s: %.2f" % (
+            redact(name),score / norm) for (name,score) in results))
     ifhtml("</center>")
     
             
@@ -137,7 +145,7 @@ def main(args):
 if __name__ == "__main__":
     try:
         main(sys.argv)
-    except Exception, e:
-        print "ERROR: ", e
-        print ""
-        print sys.exc_info()
+    except Exception as e:
+        print("ERROR: {}".format(e))
+        print("")
+        print(sys.exc_info())

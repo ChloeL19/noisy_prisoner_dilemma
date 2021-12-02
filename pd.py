@@ -38,7 +38,7 @@ See the documentation for details of what the agent format must be.
 
 def usage():
     #    sys.stderr.write(USAGE_MSG)
-    print USAGE_MSG
+    print(USAGE_MSG)
     sys.exit()
 
 def stringify(lst):
@@ -172,11 +172,11 @@ def play(p1, p2, numrounds, debug_flag, html, print_stuff=True):
                 
     def debug(s):
         if debug_flag:
-            print s
+            print(s)
 
     def myprint(s):
         if print_stuff:
-            print s
+            print(s)
 
     def result(a1, a2):
         if a1 == 'C' and a2 == 'C':
@@ -273,8 +273,8 @@ def main(args):
             debug = True
         if "html" in args:
             html = True
-    except Exception, e:
-        print "Bad argument: ", e
+    except Exception as e:
+        print("Bad argument:{}".format(e))
         usage()
             
     p1 = readplayer(1)
@@ -285,7 +285,7 @@ def main(args):
 if __name__ == "__main__":
     try:
         main(sys.argv)
-    except Exception, e:
-        print "ERROR: ", e
-        print ""
-        print sys.exc_info()
+    except Exception as e:
+        print("ERROR: {}".format(e))
+        print("")
+        print(sys.exc_info())
