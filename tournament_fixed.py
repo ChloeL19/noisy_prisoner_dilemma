@@ -13,6 +13,7 @@ import os.path
 
 from pd import play, readplayer
 import pd
+from RL_tourney import RL_agent
 
 def usage():
     print(USAGE_MSG)
@@ -22,7 +23,11 @@ do_redact = False
 
 def redact(s):
     if redact:
-        n = len(s)
+        try:
+            n = len(s)
+        except:
+            # if this is a number, means this is the RL agent
+            return "RL agent"
         keep = 3
         return s[:keep] + '*' * (n-keep)
     else:
@@ -30,8 +35,11 @@ def redact(s):
 
 
 def main(args):
-    if len(args) < 4 or len(args) > 7:
-        usage()
+    try:
+        if len(args) < 4 or len(args) > 8:
+            usage()
+    except:
+        import pdb; pdb.set_trace();
 
     try:
         numrounds = int(args[1])
@@ -46,12 +54,15 @@ def main(args):
 
         debug = False
         html = False
+        train = False
         if "debug" in args:
             debug = True
         if "html" in args:
             html = True
         if "redact" in args:
             do_redact = True
+        if "train" in args:
+            train = True
     except Exception as e:
         print("Bad argument: {}".format(e))
         usage()
@@ -101,7 +112,14 @@ def main(args):
     # to the end of the agents dictionary
     # name will be RL1
     # would be cool to investigate adding multiple RLs later
-
+    
+    # currently hardcoded to include just one RL agent 
+    rl_agent = RL_agent(initial_coop=0.5)
+    #import pdb; pdb.set_trace();
+    try:
+        agents[len(agents)+2] = rl_agent
+    except:
+        import pdb; pdb.set_trace();
     scores = dict()
     #names = agents.keys()
     names = [n for n in agents.keys()]
@@ -118,7 +136,9 @@ def main(args):
                 # RESET AGENTS STATEST TO BE 0 (used to be broken)
                 agents[n1].current_state = 0
                 agents[n2].current_state = 0
-                (s1, s2) = play(agents[n1], agents[n2], numrounds, debug, html, debug)
+                #import pdb; pdb.set_trace();
+                #print("About to play the agents.")
+                (s1, s2) = play(agents[n1], agents[n2], numrounds, debug, html, debug, train)
                 #log_scores(s1, s2)
                 scores[n1] = scores.get(n1, 0) + s1
                 scores[n2] = scores.get(n2, 0) + s2
@@ -127,7 +147,10 @@ def main(args):
     # Sort in descending order by score
     results = sorted([r for r in results], key=lambda res: res[1], reverse=True)
     # n - 1 matches, each with iters * numrounds rounds.
-    norm = float(iters * numrounds * (len(names)-1))
+    try:
+        norm = float(iters * numrounds * (len(names)-1))
+    except:
+        import pdb; pdb.set_trace();
     if html:
         print ("<hr><h1>Results</h1>")
         print ("<h3>Average scores per round:</h3>")

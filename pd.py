@@ -108,7 +108,9 @@ class Player:
             state = State(num, prob, on_cc, on_cd, on_dc, on_dd)
             self.strategyHtml+= "%s%d, %.1f, %d, %d, %d, %d<br>" %("&nbsp;" * 10,num,prob, on_cc, on_cd, on_dc, on_dd)
             self.states.append(state)
+            self.name = "automaton"
 
+        
         n = len(self.states)
         self.strategyHtml += "]"
         if n < 1 or n > MAX_STATES:
@@ -145,6 +147,10 @@ class Player:
             self.current_state = cur.on_dd
         # update the state of RL agent
     
+    def update(self, train=None, timestep_reward=None):
+        # for the automaton, updating does nothing
+        pass
+    
 def readplayer(id, f=sys.stdin):
     lines = []
     # Read until we get EOF or blank line
@@ -157,7 +163,7 @@ def readplayer(id, f=sys.stdin):
     # now actually create the player
     return Player(id, lines)
 
-def play(p1, p2, numrounds, debug_flag, html, print_stuff=True):
+def play(p1, p2, numrounds, debug_flag, html, print_stuff=True, trainbool=False):
     """
     print_stuff added so that tournament can run without printing every single game...
     """
@@ -233,8 +239,14 @@ def play(p1, p2, numrounds, debug_flag, html, print_stuff=True):
         a1 = p1.act()
         a2 = p2.act()
 
+        # if (p1.name == "RL" or p2.name == "RL"):
+        #     import pdb; pdb.set_trace();
+
         observed_a1 = noisify(a1)
         observed_a2 = noisify(a2)
+
+        # if (p1.name == "RL" or p2.name == "RL"):
+        #     import pdb; pdb.set_trace();
 
         s1 = s2 = 0
         if a1 == 'C' and a2 == 'C':
@@ -249,15 +261,24 @@ def play(p1, p2, numrounds, debug_flag, html, print_stuff=True):
 
         score1 += s1
         score2 += s2
+        print("About to update agent1.")
+        p1.update(train=trainbool, timestep_reward=s1)
+        print("About to update agent2.")
+        p2.update(train=trainbool, timestep_reward=s2)
+        print("Updated agent 2.")
+        #print("Updating state of p1")
         p1.react(result(a1, observed_a2))
+        #print("Updating state of p2")
         p2.react(result(a2, observed_a1))
+        #print("Updated state of p2")
         log_round(r, a1, a2, observed_a1, observed_a2, s1, s2, p1.current_state, p2.current_state)
-
+        #print("Logged the round.")
     footer(score1, score2)
     return (score1, score2)
         
 
 def main(args):
+    import pdb; pdb.set_trace();
     if len(args) < 2 or len(args) > 4:
         usage()
 
