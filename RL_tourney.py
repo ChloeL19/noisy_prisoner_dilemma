@@ -30,6 +30,7 @@ class RL_agent():
         self.current_state = 0 # for interfacing with other code, kind of hacky
         self.state = np.zeros((5,5))
         # ALERT: may need to change state construction!
+        # make this an integer, not 
         # initialize state with cooperative padding
         self.state[:, 0] = initial_coop
         self.state[:, 1] = 1
@@ -117,7 +118,7 @@ class RL_agent():
         - timestep_reward: score for current timestep
         '''
         if train:
-            import pdb; pdb.set_trace();
+            #import pdb; pdb.set_trace();
             with tf.GradientTape() as tape:
                 # we cooperate if the cooperation probability is greater than 50%
 
@@ -141,12 +142,17 @@ class RL_agent():
                 #x = np.expand_dims(self.state, axis=0)
                 x = self.get_obs()
                 prob_coop = self.strategy(x)[0][0]
+                # try a clipping strategy to avoid gradient explosions
+                if prob_coop == 1.0:
+                    prob_coop -= 0.01
+                if prob_coop == 0.0:
+                    prob_coop += 0.01
                 #prob_coop = self.get_action_prob()
                 discount_factor = 0.95 # CONFIRM, this may be a bad idea
                 #opt_action = 'D' # Nash equilibrium is optimal move given either choice of opponent
                 # QUESTION:: problematic because optimal action is always defect????
                 
-                timestep_loss = -tf.math.log(prob_coop) * (timestep_reward if timestep_reward > 0 else 0.1)
+                timestep_loss = -tf.math.log(1-prob_coop) / (timestep_reward if timestep_reward > 0 else 0.1)
                 #import pdb; pdb.set_trace();
                 self.cumu_loss = discount_factor*self.cumu_loss + timestep_loss
                 # oh god so I am just training it to play a Nash eq
@@ -161,8 +167,9 @@ class RL_agent():
 
             grads = tape.gradient(self.cumu_loss, self.strategy.trainable_variables)
             self.optimizer.apply_gradients(zip(grads, self.strategy.trainable_variables))
+            return self.cumu_loss
         else:
-            pass
+            return None
         # update the previous coop probability
         #self.prev_coop = np.asarray(coop_prob)[0][0]
 

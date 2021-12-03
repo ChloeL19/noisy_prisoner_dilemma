@@ -261,11 +261,13 @@ def play(p1, p2, numrounds, debug_flag, html, print_stuff=True, trainbool=False)
 
         score1 += s1
         score2 += s2
-        print("About to update agent1.")
-        p1.update(train=trainbool, timestep_reward=s1)
-        print("About to update agent2.")
-        p2.update(train=trainbool, timestep_reward=s2)
-        print("Updated agent 2.")
+        #print("About to update agent1.")
+        loss1 = p1.update(train=trainbool, timestep_reward=s1)
+        #print("About to update agent2.")
+        loss2 = p2.update(train=trainbool, timestep_reward=s2)
+        if (p1.name == "RL" or p2.name=="RL"):
+            print("Round: {}, Loss 1: {}, loss 2: {}\n".format(r, loss1, loss2))
+        #print("Updated agent 2.")
         #print("Updating state of p1")
         p1.react(result(a1, observed_a2))
         #print("Updating state of p2")

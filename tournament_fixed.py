@@ -36,7 +36,7 @@ def redact(s):
 
 def main(args):
     try:
-        if len(args) < 4 or len(args) > 8:
+        if len(args) < 4 or len(args) > 9:
             usage()
     except:
         import pdb; pdb.set_trace();
@@ -55,6 +55,7 @@ def main(args):
         debug = False
         html = False
         train = False
+        test = False # testing phase of RL agent
         if "debug" in args:
             debug = True
         if "html" in args:
@@ -63,6 +64,8 @@ def main(args):
             do_redact = True
         if "train" in args:
             train = True
+        if "test" in args:
+            test = True
     except Exception as e:
         print("Bad argument: {}".format(e))
         usage()
@@ -162,6 +165,7 @@ def main(args):
         print ("\n".join("%s: %.2f" % (
             redact(name),score / norm) for (name,score) in results))
     ifhtml("</center>")
+    # save the RL model to designated folder
     
             
 
