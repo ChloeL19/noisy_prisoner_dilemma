@@ -1,9 +1,12 @@
 import random
 import tensorflow as tf
+import keras
 import numpy as np
+import datetime
+import os
 
 class RL_agent():
-    def __init__(self, initial_coop):
+    def __init__(self, initial_coop, test=False):
         '''
         Policy gradient approach. Or something like it.
 
@@ -16,40 +19,43 @@ class RL_agent():
             where each ind variable is a zero or one indicator variable
             we keep track of a history of 5 such arrays
         '''
-        self.payoff = {
-            'CC': (3,3),
-            'CD': (0,5),
-            'DC': (5,0),
-            'DD': (0,0)
-        }
-        self.action_map = {
-            0: 'D',
-            1: 'C'
-        }
+        # self.payoff = {
+        #     'CC': (3,3),
+        #     'CD': (0,5),
+        #     'DC': (5,0),
+        #     'DD': (0,0)
+        # }
+        # self.action_map = {
+        #     0: 'D',
+        #     1: 'C'
+        # }
         self.name = "RL"
         self.current_state = 0 # for interfacing with other code, kind of hacky
         self.state = np.zeros((5,5))
         # ALERT: may need to change state construction!
-        # make this an integer, not 
+        # make this an integer, not one-hot vector
+
         # initialize state with cooperative padding
         self.state[:, 0] = initial_coop
         self.state[:, 1] = 1
         self.prev_coop = initial_coop
         # for updates
         self.cumu_loss = 0
-        #self.my_actions = [] # history of my actions
-        #self.opp_actions = [] # history of opponent actions
-        #self.states = []
+
+        # for saving checkpoint models
+        self.outdir = None
 
         self.input_shape = self.state.shape
         lr = 1e-6
-        self.strategy = tf.keras.models.Sequential([
-            # do we need a convolutional layer in here??
-            #tf.keras.layers.
-            tf.keras.layers.LSTM(units=10, input_shape=self.input_shape, #recurrent_dropout=0.1,
-			activation='relu'),
-            tf.keras.layers.Dense(units=1, input_shape = self.input_shape, activation='softmax'), # maybe try another layer
-	    ])
+        if test and self.outdir:
+            self.strategy = self.load_model()
+        else:
+            self.strategy = tf.keras.models.Sequential([
+                # maybe include a batch normalization layer
+                tf.keras.layers.LSTM(units=10, input_shape=self.input_shape, #recurrent_dropout=0.1,
+                activation='relu'),
+                tf.keras.layers.Dense(units=1, input_shape = self.input_shape, activation='softmax'), # maybe try another layer
+            ])
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
 
     def getStrategy(self):
@@ -73,10 +79,7 @@ class RL_agent():
         The same as get_action in old version but renamed to work with
         the simulation code.
         '''
-        # x = self.get_obs()
-        # coop_prob = self.strategy.predict(x).flatten()[0]
         coop_prob = self.get_action_prob()
-        #import pdb; pdb.set_trace();
         action = "C" if random.random() <= coop_prob else "D"
         self.prev_coop = coop_prob
   
@@ -170,22 +173,20 @@ class RL_agent():
             return self.cumu_loss
         else:
             return None
-        # update the previous coop probability
-        #self.prev_coop = np.asarray(coop_prob)[0][0]
 
-    # def get_action(self, my_prev_action=None, other_prev_action=None):
-    #     '''
-    #     Return an int for cooperation (1) or defection (0)
+    def save_model(self):
+        '''
+        Save the current model so it can be re-loaded for
+        future testing later.
+        '''
+        current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        self.outdir = "./trained_models/" + current_time
+        if not os.path.isdir(self.outdir):
+            os.makedirs(self.outdir)
+        self.strategy.save(self.outdir)
 
-    #     POSSIBLY FIX THE SAMPLING SCHEME HERE
-    #     '''
-    #     if my_prev_action == None and other_prev_action == None:
-    #         # randomly select an action here
-    #         return 1 if random.random() <= 0.5 else 0
-    #     x = self.compile_x(my_prev_action, other_prev_action)
-    #     action = 1 if random.random() <= self.strategy.predict(x) else 0
-    #     return action
-
-    # def get_action_prob(self, my_prev_action, other_prev_action):
-    #     return self.strategy(self.compile_x(my_prev_action,
-    #     other_prev_action))
+    def load_model(self):
+        '''
+        Load the saved model for testing purposes.
+        '''
+        return keras.models.load_model(self.outdir)
