@@ -117,7 +117,7 @@ def main(args):
     # would be cool to investigate adding multiple RLs later
     
     # currently hardcoded to include just one RL agent 
-    rl_agent = RL_agent(initial_coop=0.5)
+    rl_agent = RL_agent(initial_coop=0.5, test=test)
     #import pdb; pdb.set_trace();
     try:
         agents[len(agents)+2] = rl_agent
@@ -166,7 +166,8 @@ def main(args):
             redact(name),score / norm) for (name,score) in results))
     ifhtml("</center>")
     # save the RL model to designated folder
-    
+    rl_agent.save_model()
+
     
             
 

@@ -265,8 +265,16 @@ def play(p1, p2, numrounds, debug_flag, html, print_stuff=True, trainbool=False)
         loss1 = p1.update(train=trainbool, timestep_reward=s1)
         #print("About to update agent2.")
         loss2 = p2.update(train=trainbool, timestep_reward=s2)
-        if (p1.name == "RL" or p2.name=="RL"):
-            print("Round: {}, Loss 1: {}, loss 2: {}\n".format(r, loss1, loss2))
+        # if (p1.name == "RL" or p2.name=="RL"):
+        #     print("Round: {}, Loss 1: {}, loss 2: {}\n".format(r, loss1, loss2))
+
+        # only perform logging if we are training!
+        # log the loss to tensorboard
+        # each opponent should have its own summary writer
+
+        # also log the reward (just the negative of the loss)
+
+
         #print("Updated agent 2.")
         #print("Updating state of p1")
         p1.react(result(a1, observed_a2))

@@ -4,6 +4,7 @@ import keras
 import numpy as np
 import datetime
 import os
+import glob
 
 class RL_agent():
     def __init__(self, initial_coop, test=False):
@@ -19,16 +20,6 @@ class RL_agent():
             where each ind variable is a zero or one indicator variable
             we keep track of a history of 5 such arrays
         '''
-        # self.payoff = {
-        #     'CC': (3,3),
-        #     'CD': (0,5),
-        #     'DC': (5,0),
-        #     'DD': (0,0)
-        # }
-        # self.action_map = {
-        #     0: 'D',
-        #     1: 'C'
-        # }
         self.name = "RL"
         self.current_state = 0 # for interfacing with other code, kind of hacky
         self.state = np.zeros((5,5))
@@ -47,7 +38,10 @@ class RL_agent():
 
         self.input_shape = self.state.shape
         lr = 1e-6
-        if test and self.outdir:
+        if test and os.listdir("./trained_models/") != []:
+            # get the latest model saved in the training models directory
+            list_of_files = glob.glob("./trained_models/*")
+            self.outdir = max(list_of_files, key=os.path.getctime)
             self.strategy = self.load_model()
         else:
             self.strategy = tf.keras.models.Sequential([
@@ -189,4 +183,5 @@ class RL_agent():
         '''
         Load the saved model for testing purposes.
         '''
+        print("Loading model from {}\n".format(self.outdir))
         return keras.models.load_model(self.outdir)
