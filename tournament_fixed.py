@@ -10,6 +10,7 @@ import sys
 import glob
 import os
 import os.path
+import datetime
 
 from pd import play, readplayer
 import pd
@@ -36,7 +37,7 @@ def redact(s):
 
 def main(args):
     try:
-        if len(args) < 4 or len(args) > 9:
+        if len(args) < 4 or len(args) > 10:
             usage()
     except:
         import pdb; pdb.set_trace();
@@ -86,10 +87,12 @@ def main(args):
         #print "Opening %s..." % fname
         with open(fname) as f:
             try:
-                p = readplayer(n, f)
-                n += 1
                 name = os.path.basename(fname[:-6])
+                p = readplayer(n, f, name)
+                n += 1
+                # name = os.path.basename(fname[:-6])
                 agents[name] = p
+                #p.name = name
             except Exception as e:
                 ifhtml("<p>")
                 print("Couldn't read %s. Skipping. Error: %s" % (fname, e))
@@ -118,6 +121,7 @@ def main(args):
     
     # currently hardcoded to include just one RL agent 
     rl_agent = RL_agent(initial_coop=0.5, test=test)
+    curr_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     #import pdb; pdb.set_trace();
     try:
         agents[len(agents)+2] = rl_agent
@@ -139,9 +143,8 @@ def main(args):
                 # RESET AGENTS STATEST TO BE 0 (used to be broken)
                 agents[n1].current_state = 0
                 agents[n2].current_state = 0
-                #import pdb; pdb.set_trace();
                 #print("About to play the agents.")
-                (s1, s2) = play(agents[n1], agents[n2], numrounds, debug, html, debug, train)
+                (s1, s2) = play(agents[n1], agents[n2], numrounds, debug, html, curr_time, debug, train, test)
                 #log_scores(s1, s2)
                 scores[n1] = scores.get(n1, 0) + s1
                 scores[n2] = scores.get(n2, 0) + s2
@@ -166,10 +169,8 @@ def main(args):
             redact(name),score / norm) for (name,score) in results))
     ifhtml("</center>")
     # save the RL model to designated folder
-    rl_agent.save_model()
-
-    
-            
+    if not test:
+        rl_agent.save_model()
 
 if __name__ == "__main__":
     try:

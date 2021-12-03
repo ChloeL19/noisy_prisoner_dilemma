@@ -117,8 +117,6 @@ class RL_agent():
         if train:
             #import pdb; pdb.set_trace();
             with tf.GradientTape() as tape:
-                # we cooperate if the cooperation probability is greater than 50%
-
                 # we are not batching here
 
                 # reward-guided loss
@@ -140,6 +138,7 @@ class RL_agent():
                 x = self.get_obs()
                 prob_coop = self.strategy(x)[0][0]
                 # try a clipping strategy to avoid gradient explosions
+                # these occur when prob_coop == 0.0 or prob_coop == 1.0
                 if prob_coop == 1.0:
                     prob_coop -= 0.01
                 if prob_coop == 0.0:

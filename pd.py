@@ -11,6 +11,9 @@
 import sys
 import random
 import re
+import os
+import tensorflow as tf
+import tensorboard
 
 # Constants:
 MAX_STATES = 5
@@ -83,7 +86,7 @@ class State:
 
 
 class Player:
-    def __init__(self, id, lines):
+    def __init__(self, id, lines, name):
         self.id = id
         self.current_state = 0
         self.states = []
@@ -108,7 +111,7 @@ class Player:
             state = State(num, prob, on_cc, on_cd, on_dc, on_dd)
             self.strategyHtml+= "%s%d, %.1f, %d, %d, %d, %d<br>" %("&nbsp;" * 10,num,prob, on_cc, on_cd, on_dc, on_dd)
             self.states.append(state)
-            self.name = "automaton"
+            self.name = "automaton_"+name
 
         
         n = len(self.states)
@@ -151,7 +154,7 @@ class Player:
         # for the automaton, updating does nothing
         pass
     
-def readplayer(id, f=sys.stdin):
+def readplayer(id, f=sys.stdin, name=None):
     lines = []
     # Read until we get EOF or blank line
     while True:
@@ -161,9 +164,9 @@ def readplayer(id, f=sys.stdin):
             break
         lines.append(line)
     # now actually create the player
-    return Player(id, lines)
+    return Player(id, lines, name)
 
-def play(p1, p2, numrounds, debug_flag, html, print_stuff=True, trainbool=False):
+def play(p1, p2, numrounds, debug_flag, html, timestamp, print_stuff=True, trainbool=False, testbool=False):
     """
     print_stuff added so that tournament can run without printing every single game...
     """
@@ -233,6 +236,20 @@ def play(p1, p2, numrounds, debug_flag, html, print_stuff=True, trainbool=False)
     
     header()
 
+    # create a folder for storing logs of actions
+    # only do action logging for each game if in testing mode
+
+    # create summary writers for tensorboard, but only if RL agent inolved
+    if (trainbool or testbool) and (p2.name == "RL" or p1.name== "RL"):
+        if p2.name == "RL":
+            summ_dir = "./tensorboard_logs/" + timestamp + "/" + p1.name
+        if p1.name == "RL":
+            summ_dir = "./tensorboard_logs/" + timestamp + "/" + p2.name
+
+        if not os.path.isdir(summ_dir):
+            os.makedirs(summ_dir)
+        opponent_writer = tf.summary.create_file_writer(summ_dir)
+
     score1 = 0
     score2 = 0
     for r in range(numrounds):
@@ -258,12 +275,9 @@ def play(p1, p2, numrounds, debug_flag, html, print_stuff=True, trainbool=False)
         if a1 == 'D' and a2 == 'D':
             s1 = s2 = 1
 
-
         score1 += s1
         score2 += s2
-        #print("About to update agent1.")
         loss1 = p1.update(train=trainbool, timestep_reward=s1)
-        #print("About to update agent2.")
         loss2 = p2.update(train=trainbool, timestep_reward=s2)
         # if (p1.name == "RL" or p2.name=="RL"):
         #     print("Round: {}, Loss 1: {}, loss 2: {}\n".format(r, loss1, loss2))
@@ -273,16 +287,27 @@ def play(p1, p2, numrounds, debug_flag, html, print_stuff=True, trainbool=False)
         # each opponent should have its own summary writer
 
         # also log the reward (just the negative of the loss)
+        if (trainbool or testbool) and (p2.name == "RL" or p1.name== "RL"):
+            if trainbool:
+                if p2.name == "RL":
+                    with opponent_writer.as_default():
+                        tf.summary.scalar('TrainLoss', loss2, step=r)
+                        tf.summary.scalar('TrainScore', score2, step=r)
+                if p1.name == "RL":
+                    with opponent_writer.as_default():
+                        tf.summary.scalar('TrainLoss', loss1, step=r)
+                        tf.summary.scalar('TrainScore', score1, step=r)
+            if testbool:
+                if p2.name == "RL":
+                    with opponent_writer.as_default():
+                        tf.summary.scalar('TestScore', score2, step=r)
+                if p1.name == "RL":
+                    with opponent_writer.as_default():
+                        tf.summary.scalar('TestScore', score1, step=r)
 
-
-        #print("Updated agent 2.")
-        #print("Updating state of p1")
         p1.react(result(a1, observed_a2))
-        #print("Updating state of p2")
         p2.react(result(a2, observed_a1))
-        #print("Updated state of p2")
         log_round(r, a1, a2, observed_a1, observed_a2, s1, s2, p1.current_state, p2.current_state)
-        #print("Logged the round.")
     footer(score1, score2)
     return (score1, score2)
         
