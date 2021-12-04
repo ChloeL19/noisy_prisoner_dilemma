@@ -11,6 +11,7 @@ import glob
 import os
 import os.path
 import datetime
+import tensorflow as tf
 
 from pd import play, readplayer
 import pd
@@ -128,24 +129,48 @@ def main(args):
     for k in agents.keys():
         p = agents[k]
 
+    scoref_dir = "model_scores/" + curr_time
+    if not os.path.isdir(scoref_dir):
+        os.makedirs(scoref_dir)
+    
+    scoref = open(scoref_dir + "/episode_scores.txt", 'a')
+    scoref.write("Episode number, episode RL score\n")
+
     ep_id = 0 # episode ID (for training purposes)
+    agentid = 0
     for i in range(len(names)):
         for j in range(i+1,len(names)):
             #import pdb; pdb.set_trace();
             n1 = names[i]
             n2 = names[j]
+
+            # define tensorboard up here
+            #import pdb; pdb.set_trace();
+            if (train or test) and (agents[n2].name == "RL" or agents[n1].name== "RL"):
+                if agents[n2].name == "RL":
+                    summ_dir = "./tensorboard_logs/" + curr_time + "/" + agents[n1].name
+                if agents[n1].name == "RL":
+                    summ_dir = "./tensorboard_logs/" + curr_time + "/" + agents[n2].name
+
+                if not os.path.isdir(summ_dir):
+                    os.makedirs(summ_dir)
+                opponent_writer = tf.summary.create_file_writer(summ_dir)
+
             header(n1,n2)
             for k in range(iters):
                 # RESET AGENTS STATEST TO BE 0 (used to be broken)
                 agents[n1].current_state = 0
                 agents[n2].current_state = 0
-    
-                (s1, s2) = play(agents[n1], agents[n2], numrounds, debug, html, curr_time, ep_id, debug, train, test)
+                step_id = int(str(ep_id) + str(agentid))
+                (s1, s2) = play(agents[n1], agents[n2], numrounds, debug, html, curr_time, ep_id, scoref, 
+                opponent_writer, debug, train, test)
                 #log_scores(s1, s2)
                 scores[n1] = scores.get(n1, 0) + s1
                 scores[n2] = scores.get(n2, 0) + s2
-            ep_id += 1
+                ep_id += 1
+            agentid += 1
 
+    scoref.close()
     results = scores.items()
     # Sort in descending order by score
     results = sorted([r for r in results], key=lambda res: res[1], reverse=True)

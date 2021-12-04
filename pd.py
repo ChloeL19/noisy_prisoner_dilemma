@@ -168,7 +168,8 @@ def readplayer(id, f=sys.stdin, name=None):
     # now actually create the player
     return Player(id, lines, name)
 
-def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=True, trainbool=False, testbool=False):
+def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, scoref,
+opponent_writer, print_stuff=True, trainbool=False, testbool=False):
     """
     print_stuff added so that tournament can run without printing every single game...
     """
@@ -278,15 +279,16 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
     # only do action logging for each game if in testing mode
 
     # create summary writers for tensorboard, but only if RL agent inolved
-    if (trainbool or testbool) and (p2.name == "RL" or p1.name== "RL"):
-        if p2.name == "RL":
-            summ_dir = "./tensorboard_logs/" + timestamp + "/" + p1.name
-        if p1.name == "RL":
-            summ_dir = "./tensorboard_logs/" + timestamp + "/" + p2.name
+    # if (trainbool or testbool) and (p2.name == "RL" or p1.name== "RL"):
+    #     if p2.name == "RL":
+    #         summ_dir = "./tensorboard_logs/" + timestamp + "/" + p1.name
+    #     if p1.name == "RL":
+    #         summ_dir = "./tensorboard_logs/" + timestamp + "/" + p2.name
 
-        if not os.path.isdir(summ_dir):
-            os.makedirs(summ_dir)
-        opponent_writer = tf.summary.create_file_writer(summ_dir)
+    #     if not os.path.isdir(summ_dir):
+    #         os.makedirs(summ_dir)
+    #     opponent_writer = tf.summary.create_file_writer(summ_dir)
+        # file for logging the score after each episode
 
     # this is the testing procedure
     score1 = 0
@@ -375,13 +377,13 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
             elif trainbool:
                 score1 = rl_score
                 score2 = opp_score
-            if testbool:
-                if p2.name == "RL":
-                    with opponent_writer.as_default():
-                        tf.summary.scalar('TestScore', score2, step=timestep)
-                if p1.name == "RL":
-                    with opponent_writer.as_default():
-                        tf.summary.scalar('TestScore', score1, step=timestep)
+            # if testbool:
+            #     if p2.name == "RL":
+            #         with opponent_writer.as_default():
+            #             tf.summary.scalar('TestScore', score2, step=timestep)
+            #     if p1.name == "RL":
+            #         with opponent_writer.as_default():
+            #             tf.summary.scalar('TestScore', score1, step=timestep)
 
         # in both cases we need to update the state
         p1.react(result(a1, observed_a2))
@@ -404,12 +406,24 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
             for ix,grad in enumerate(rl.gradBuffer):
                 rl.gradBuffer[ix] = grad * 0
             
-        if episode % 5 == 0:
-            import pdb; pdb.set_trace();
+        if episode % 1 == 0:
+            # write to a file
+            #scoref = open(scoref_dir+ "/episode_scores.txt", 'a')
+            scoref.write("{}, {}\n".format(episode, scores[-1]))
+            #scoref.close()
+
             with opponent_writer.as_default():
                 tf.summary.scalar('TrainScore', np.mean(scores[-5:]), step=episode)
+                tf.summary.scalar('TrainLoss', loss, step=episode)
 
-    
+    if testbool:
+        if p2.name == "RL":
+            with opponent_writer.as_default():
+                tf.summary.scalar('TestScore', score2, step=episode)
+        if p1.name == "RL":
+            with opponent_writer.as_default():
+                tf.summary.scalar('TestScore', score1, step=episode)
+
     footer(score1, score2)
     return (score1, score2)
         
