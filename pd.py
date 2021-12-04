@@ -290,6 +290,10 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
             os.makedirs(summ_dir)
         opponent_writer = tf.summary.create_file_writer(summ_dir)
 
+    # this is the testing procedure
+    score1 = 0
+    score2 = 0
+
     # if trainbool, implement the training procedure here
     # here is the inspiration: https://medium.com/@hamza.emra/reinforcement-learning-with-tensorflow-2-0-cca33fead626
     #import pdb; pdb.set_trace();
@@ -298,27 +302,19 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
         ep_memory = []
         ep_score = 0
         scores = []
+        rl_score = 0
+        opp_score = 0
         if p2.name == "RL":
             rl = p2
             opp = p1
         else:
             rl = p1
             opp = p2
-
-    # this is the testing procedure
-    score1 = 0
-    score2 = 0
+    
+    # let the games begin
     for timestep in range(numrounds):
         # if train do the gradient tape update procedure
         if trainbool and (p2.name == "RL" or p1.name== "RL"):
-            # identify our rl agent
-            # if p2.name == "RL":
-            #     rl = p2
-            #     opp = p1
-            # else:
-            #     rl = p1
-            #     opp = p2
-            #import pdb; pdb.set_trace();
             with tf.GradientTape() as tape:
                 #forward pass
                 logits = rl.strategy(rl.state)
@@ -333,10 +329,10 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
             a1 = rl.act()
             a2 = opp.act() 
             (observed_a1, observed_a2), (s1, s2) = step(a1, a2)
-            print("The rl action: {}\n".format(a1))
+            print("The (rl, opponent) action profile: {}\n".format((a1, a2)))
             ep_score +=s1
-            score1 += s1
-            score2 += s2
+            rl_score += s1
+            opp_score += s2
             # MAY NOT WANT TO KEEP THIS
             # if we are done, subtract 10 from the reward (???)
             #import pdb; pdb.set_trace();
@@ -349,37 +345,18 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
         else:
             a1 = p1.act()
             a2 = p2.act()
-
-            # observed_a1 = noisify(a1)
-            # observed_a2 = noisify(a2)
-
-            # s1 = s2 = 0
-            # if a1 == 'C' and a2 == 'C':
-            #     s1 = s2 = 3
-            # if a1 == 'C' and a2 == 'D':
-            #     s2 = 5
-            # if a1 == 'D' and a2 == 'C':
-            #     s1 = 5
-            # if a1 == 'D' and a2 == 'D':
-            #     s1 = s2 = 1
             (observed_a1, observed_a2), (s1, s2) = step(a1, a2)
             score1 += s1
             score2 += s2
-            #loss1 = p1.update(train=trainbool, timestep_reward=s1)
-            #loss2 = p2.update(train=trainbool, timestep_reward=s2)
-        # end of test logic
         # general logging
         if (trainbool or testbool) and (p2.name == "RL" or p1.name== "RL"):
-            # if trainbool:
-            #     pass
-                # if p2.name == "RL":
-                #     with opponent_writer.as_default():
-                #         tf.summary.scalar('TrainLoss', loss2, step=r)
-                #         tf.summary.scalar('TrainScore', score2, step=r)
-                # if p1.name == "RL":
-                #     with opponent_writer.as_default():
-                #         tf.summary.scalar('TrainLoss', loss1, step=r)
-                #         tf.summary.scalar('TrainScore', score1, step=r)
+            # sort out scoring for rl agent
+            if p2.name == "RL":
+                score2 = rl_score
+                score1 = opp_score
+            else:
+                score1 = rl_score
+                score2 = opp_score
             if testbool:
                 if p2.name == "RL":
                     with opponent_writer.as_default():
@@ -389,20 +366,15 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
                         tf.summary.scalar('TestScore', score1, step=timestep)
 
         # in both cases we need to update the state
-        #import pdb; pdb.set_trace();
         p1.react(result(a1, observed_a2))
         p2.react(result(a2, observed_a1))
-        #print("The rewards: {}".format(s1, s2))
         log_round(timestep, a1, a2, observed_a1, observed_a2, s1, s2, p1.current_state, p2.current_state)
     
-    #import pdb; pdb.set_trace();
     if trainbool and (p2.name == "RL" or p1.name== "RL"):
-        #import pdb; pdb.set_trace();
         scores.append(ep_score)
         # Discound the rewards 
         ep_memory = np.array(ep_memory)
         ep_memory[:,1] = discount_rewards(ep_memory[:,1])
-        
         for grads, r in ep_memory:
             for ix,grad in enumerate(grads):
                 rl.gradBuffer[ix] += grad * r
@@ -414,9 +386,7 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
                 rl.gradBuffer[ix] = grad * 0
             
         if episode % 5 == 0:
-        #     print("Episode  {}  Score  {}".format(e, np.mean(scores[-100:])))
             with opponent_writer.as_default():
-                #import pdb; pdb.set_trace();
                 tf.summary.scalar('TrainScore', np.mean(scores[-5:]), step=timestep)
 
     
