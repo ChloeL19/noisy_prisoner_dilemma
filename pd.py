@@ -294,7 +294,7 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
 
     # if trainbool, implement the training procedure here
     # here is the inspiration: https://medium.com/@hamza.emra/reinforcement-learning-with-tensorflow-2-0-cca33fead626
-    if (trainbool or testbool) and (p2.name == "RL" or p1.name== "RL"):
+    if trainbool and (p2.name == "RL" or p1.name== "RL"):
         #print("Creating rl agent")
         ep_memory = []
         ep_score = 0
@@ -369,10 +369,10 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
         # general logging
         if (trainbool or testbool) and (p2.name == "RL" or p1.name== "RL"):
             # sort out scoring for rl agent
-            if p2.name == "RL":
+            if trainbool and p2.name == "RL":
                 score2 = rl_score
                 score1 = opp_score
-            else:
+            elif trainbool:
                 score1 = rl_score
                 score2 = opp_score
             if testbool:
@@ -405,6 +405,7 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
                 rl.gradBuffer[ix] = grad * 0
             
         if episode % 5 == 0:
+            import pdb; pdb.set_trace();
             with opponent_writer.as_default():
                 tf.summary.scalar('TrainScore', np.mean(scores[-5:]), step=episode)
 
