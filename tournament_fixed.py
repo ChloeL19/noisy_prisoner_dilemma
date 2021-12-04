@@ -114,25 +114,22 @@ def main(args):
         '''
         return (a > b) - (a < b)
 
-    # CHLOE IDEA: specially load and append the RL agent
-    # to the end of the agents dictionary
-    # name will be RL1
-    # would be cool to investigate adding multiple RLs later
-    
     # currently hardcoded to include just one RL agent 
+    #import pdb; pdb.set_trace();
     rl_agent = RL_agent(initial_coop=0.5, test=test)
     curr_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    #import pdb; pdb.set_trace();
+
     try:
         agents[len(agents)+2] = rl_agent
     except:
         import pdb; pdb.set_trace();
     scores = dict()
-    #names = agents.keys()
     names = [n for n in agents.keys()]
     for k in agents.keys():
         p = agents[k]
-        #print "key=", k,"\nvalues=\n", p.getStrategy(),"\n\n"
+
+    #import pdb; pdb.set_trace();
+    ep_id = 0 # episode ID (for training purposes)
     for i in range(len(names)):
         for j in range(i+1,len(names)):
             #import pdb; pdb.set_trace();
@@ -143,11 +140,12 @@ def main(args):
                 # RESET AGENTS STATEST TO BE 0 (used to be broken)
                 agents[n1].current_state = 0
                 agents[n2].current_state = 0
-                #print("About to play the agents.")
-                (s1, s2) = play(agents[n1], agents[n2], numrounds, debug, html, curr_time, debug, train, test)
+    
+                (s1, s2) = play(agents[n1], agents[n2], numrounds, debug, html, curr_time, ep_id, debug, train, test)
                 #log_scores(s1, s2)
                 scores[n1] = scores.get(n1, 0) + s1
                 scores[n2] = scores.get(n2, 0) + s2
+            ep_id += 1
 
     results = scores.items()
     # Sort in descending order by score

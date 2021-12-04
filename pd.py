@@ -12,6 +12,8 @@ import sys
 import random
 import re
 import os
+import numpy as np
+import keras
 import tensorflow as tf
 import tensorboard
 
@@ -166,10 +168,11 @@ def readplayer(id, f=sys.stdin, name=None):
     # now actually create the player
     return Player(id, lines, name)
 
-def play(p1, p2, numrounds, debug_flag, html, timestamp, print_stuff=True, trainbool=False, testbool=False):
+def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=True, trainbool=False, testbool=False):
     """
     print_stuff added so that tournament can run without printing every single game...
     """
+    #import pdb; pdb.set_trace();
     def noisify(a):
         if random.random() < ERROR_PROB:
             if a == "C":
@@ -232,9 +235,46 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, print_stuff=True, train
         else:
             myprint("Round %d: actions (%s, %s). Observed as (%s, %s). Scores (%d, %d), " % (
             r, a1, a2, observed_a1, observed_a2, s1, s2))
-            
+
+    # The next two functions are helper functions for the RL agent
+    def step(a1, a2):
+        '''
+        Take a "step" in the environment of the game.
+        In other words, execute one round.
+        '''
+        # a1 = p1.act()
+        # a2 = p2.act()
+
+        observed_a1 = noisify(a1)
+        observed_a2 = noisify(a2)
+
+        s1 = s2 = 0
+        if a1 == 'C' and a2 == 'C':
+            s1 = s2 = 3
+        if a1 == 'C' and a2 == 'D':
+            s2 = 5
+        if a1 == 'D' and a2 == 'C':
+            s1 = 5
+        if a1 == 'D' and a2 == 'D':
+            s1 = s2 = 1
+
+        # score1 += s1
+        # score2 += s2
+        # return state tuple and reward tuple
+        return (observed_a1, observed_a2), (s1, s2)
+    
+    # gamma: discount rate 
+    def discount_rewards(r, gamma = 0.8):
+        discounted_r = np.zeros_like(r)
+        running_add = 0
+        for t in reversed(range(0, r.size)):
+            running_add = running_add * gamma + r[t]
+            discounted_r[t] = running_add
+        return discounted_r
     
     header()
+
+    #import pdb; pdb.set_trace();
 
     # create a folder for storing logs of actions
     # only do action logging for each game if in testing mode
@@ -250,64 +290,136 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, print_stuff=True, train
             os.makedirs(summ_dir)
         opponent_writer = tf.summary.create_file_writer(summ_dir)
 
+    # if trainbool, implement the training procedure here
+    # here is the inspiration: https://medium.com/@hamza.emra/reinforcement-learning-with-tensorflow-2-0-cca33fead626
+    #import pdb; pdb.set_trace();
+    if trainbool and (p2.name == "RL" or p1.name== "RL"):
+        #print("Creating rl agent")
+        ep_memory = []
+        ep_score = 0
+        scores = []
+        if p2.name == "RL":
+            rl = p2
+            opp = p1
+        else:
+            rl = p1
+            opp = p2
+
+    # this is the testing procedure
     score1 = 0
     score2 = 0
-    for r in range(numrounds):
-        a1 = p1.act()
-        a2 = p2.act()
+    for timestep in range(numrounds):
+        # if train do the gradient tape update procedure
+        if trainbool and (p2.name == "RL" or p1.name== "RL"):
+            # identify our rl agent
+            # if p2.name == "RL":
+            #     rl = p2
+            #     opp = p1
+            # else:
+            #     rl = p1
+            #     opp = p2
+            #import pdb; pdb.set_trace();
+            with tf.GradientTape() as tape:
+                #forward pass
+                logits = rl.strategy(rl.state)
+                a_dist = logits.numpy()
+                # Choose random action with p = action dist
+                a = np.random.choice(a_dist[0],p=a_dist[0])
+                a = np.argmax(a_dist == a)
+                loss = rl.compute_loss([a], logits)
+            grads = tape.gradient(loss, rl.strategy.trainable_variables)
+            # make the choosen action
+            #import pdb; pdb.set_trace();
+            a1 = rl.act()
+            a2 = opp.act() 
+            (observed_a1, observed_a2), (s1, s2) = step(a1, a2)
+            print("The rl action: {}\n".format(a1))
+            ep_score +=s1
+            score1 += s1
+            score2 += s2
+            # MAY NOT WANT TO KEEP THIS
+            # if we are done, subtract 10 from the reward (???)
+            #import pdb; pdb.set_trace();
+            # try:
+            #     if timestep==numrounds-1: s1-=10 # small trick to make training faster
+            # except:
+            #     import pdb; pdb.set_trace();
+            ep_memory.append([grads,s1])
+        # if test do the following
+        else:
+            a1 = p1.act()
+            a2 = p2.act()
 
-        # if (p1.name == "RL" or p2.name == "RL"):
-        #     import pdb; pdb.set_trace();
+            # observed_a1 = noisify(a1)
+            # observed_a2 = noisify(a2)
 
-        observed_a1 = noisify(a1)
-        observed_a2 = noisify(a2)
-
-        # if (p1.name == "RL" or p2.name == "RL"):
-        #     import pdb; pdb.set_trace();
-
-        s1 = s2 = 0
-        if a1 == 'C' and a2 == 'C':
-            s1 = s2 = 3
-        if a1 == 'C' and a2 == 'D':
-            s2 = 5
-        if a1 == 'D' and a2 == 'C':
-            s1 = 5
-        if a1 == 'D' and a2 == 'D':
-            s1 = s2 = 1
-
-        score1 += s1
-        score2 += s2
-        loss1 = p1.update(train=trainbool, timestep_reward=s1)
-        loss2 = p2.update(train=trainbool, timestep_reward=s2)
-        # if (p1.name == "RL" or p2.name=="RL"):
-        #     print("Round: {}, Loss 1: {}, loss 2: {}\n".format(r, loss1, loss2))
-
-        # only perform logging if we are training!
-        # log the loss to tensorboard
-        # each opponent should have its own summary writer
-
-        # also log the reward (just the negative of the loss)
+            # s1 = s2 = 0
+            # if a1 == 'C' and a2 == 'C':
+            #     s1 = s2 = 3
+            # if a1 == 'C' and a2 == 'D':
+            #     s2 = 5
+            # if a1 == 'D' and a2 == 'C':
+            #     s1 = 5
+            # if a1 == 'D' and a2 == 'D':
+            #     s1 = s2 = 1
+            (observed_a1, observed_a2), (s1, s2) = step(a1, a2)
+            score1 += s1
+            score2 += s2
+            #loss1 = p1.update(train=trainbool, timestep_reward=s1)
+            #loss2 = p2.update(train=trainbool, timestep_reward=s2)
+        # end of test logic
+        # general logging
         if (trainbool or testbool) and (p2.name == "RL" or p1.name== "RL"):
-            if trainbool:
-                if p2.name == "RL":
-                    with opponent_writer.as_default():
-                        tf.summary.scalar('TrainLoss', loss2, step=r)
-                        tf.summary.scalar('TrainScore', score2, step=r)
-                if p1.name == "RL":
-                    with opponent_writer.as_default():
-                        tf.summary.scalar('TrainLoss', loss1, step=r)
-                        tf.summary.scalar('TrainScore', score1, step=r)
+            # if trainbool:
+            #     pass
+                # if p2.name == "RL":
+                #     with opponent_writer.as_default():
+                #         tf.summary.scalar('TrainLoss', loss2, step=r)
+                #         tf.summary.scalar('TrainScore', score2, step=r)
+                # if p1.name == "RL":
+                #     with opponent_writer.as_default():
+                #         tf.summary.scalar('TrainLoss', loss1, step=r)
+                #         tf.summary.scalar('TrainScore', score1, step=r)
             if testbool:
                 if p2.name == "RL":
                     with opponent_writer.as_default():
-                        tf.summary.scalar('TestScore', score2, step=r)
+                        tf.summary.scalar('TestScore', score2, step=timestep)
                 if p1.name == "RL":
                     with opponent_writer.as_default():
-                        tf.summary.scalar('TestScore', score1, step=r)
+                        tf.summary.scalar('TestScore', score1, step=timestep)
 
+        # in both cases we need to update the state
+        #import pdb; pdb.set_trace();
         p1.react(result(a1, observed_a2))
         p2.react(result(a2, observed_a1))
-        log_round(r, a1, a2, observed_a1, observed_a2, s1, s2, p1.current_state, p2.current_state)
+        #print("The rewards: {}".format(s1, s2))
+        log_round(timestep, a1, a2, observed_a1, observed_a2, s1, s2, p1.current_state, p2.current_state)
+    
+    #import pdb; pdb.set_trace();
+    if trainbool and (p2.name == "RL" or p1.name== "RL"):
+        #import pdb; pdb.set_trace();
+        scores.append(ep_score)
+        # Discound the rewards 
+        ep_memory = np.array(ep_memory)
+        ep_memory[:,1] = discount_rewards(ep_memory[:,1])
+        
+        for grads, r in ep_memory:
+            for ix,grad in enumerate(grads):
+                rl.gradBuffer[ix] += grad * r
+        
+        # update after every episode for now but we can adjust
+        if episode % 1 == 0:
+            rl.optimizer.apply_gradients(zip(rl.gradBuffer, rl.strategy.trainable_variables))
+            for ix,grad in enumerate(rl.gradBuffer):
+                rl.gradBuffer[ix] = grad * 0
+            
+        if episode % 5 == 0:
+        #     print("Episode  {}  Score  {}".format(e, np.mean(scores[-100:])))
+            with opponent_writer.as_default():
+                #import pdb; pdb.set_trace();
+                tf.summary.scalar('TrainScore', np.mean(scores[-5:]), step=timestep)
+
+    
     footer(score1, score2)
     return (score1, score2)
         
