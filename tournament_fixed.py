@@ -145,7 +145,6 @@ def main(args):
             n2 = names[j]
 
             # define tensorboard up here
-            #import pdb; pdb.set_trace();
             opponent_writer = None
             if (train or test) and (agents[n2].name == "RL" or agents[n1].name== "RL"):
                 if agents[n2].name == "RL":
