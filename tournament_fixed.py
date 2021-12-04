@@ -136,7 +136,7 @@ def main(args):
     scoref = open(scoref_dir + "/episode_scores.txt", 'a')
     scoref.write("Episode number, episode RL score\n")
 
-    ep_id = 0 # episode ID (for training purposes)
+    #ep_id = 0 # episode ID (for training purposes)
     agentid = 0
     for i in range(len(names)):
         for j in range(i+1,len(names)):
@@ -145,6 +145,7 @@ def main(args):
             n2 = names[j]
 
             # define tensorboard up here
+            ep_id = 0
             opponent_writer = None
             if (train or test) and (agents[n2].name == "RL" or agents[n1].name== "RL"):
                 if agents[n2].name == "RL":
