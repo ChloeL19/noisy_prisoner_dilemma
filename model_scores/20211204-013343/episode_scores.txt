@@ -1,0 +1,7 @@
+Episode number, episode RL score
+980, 26
+981, 32
+982, 27
+983, 27
+984, 22
+985, 15
