@@ -22,11 +22,12 @@ class RL_agent():
         '''
         self.name = "RL"
         self.current_state = 0 # for interfacing with other code, kind of hacky
-        self.state = np.zeros((1,5))
+        self.input_dim = 5
+        self.state = np.random.rand(1,self.input_dim)
 
         # initialize state with cooperative padding
-        self.state[0, 0] = initial_coop
-        self.state[0, 1] = 1
+        # self.state[0, 0] = initial_coop
+        # self.state[0, 1] = 1
         self.prev_coop = initial_coop
 
         # for updates
@@ -36,7 +37,6 @@ class RL_agent():
         self.outdir = None
 
         # defining the model itself
-        self.input_dim = 5
         lr = 1e-6
         if test and os.listdir("./trained_models/") != []:
             # get the latest model saved in the training models directory
@@ -47,7 +47,7 @@ class RL_agent():
             print("Building a new model")
             self.strategy = tf.keras.Sequential()
             self.strategy.add(tf.keras.layers.Dense(32, input_dim = self.input_dim, activation='relu'))
-            self.strategy.add(tf.keras.layers.Dense(1, activation = "softmax"))
+            self.strategy.add(tf.keras.layers.Dense(2, activation = "softmax"))
             self.strategy.build()
             #optimizer = tf.keras.optimizers.Adam(learning_rate = 0.01)
             #compute_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
@@ -80,19 +80,34 @@ class RL_agent():
 
     def get_action_prob(self):
         #x = self.get_obs()
-        #import pdb; pdb.set_trace();
         return self.strategy.predict(self.state) #.flatten()[0]
      
-    def act(self):
+    def act(self, train=None):
         '''
         The same as get_action in old version but renamed to work with
         the simulation code.
+        - train: bool, is this 
         '''
-        coop_prob = self.get_action_prob()
-        action = "C" if random.random() <= coop_prob else "D"
-        self.prev_coop = coop_prob
+        logits = self.get_action_prob()
+
+        # if coop_prob == 1.0:
+        #     coop_prob -= 0.01
+        # elif coop_prob == 0.0:
+        #     coop_prob += 0.01
+        # print("RL state: {}".format(self.state))
+        # print("RL cooperation prob: {}".format(coop_prob))
+
+        # action = "C" if random.random() <= coop_prob else "D"
+        # self.prev_coop = coop_prob
+
+        a_dist = logits
+        # Choose random action with p = action dist
+        a = np.random.choice(a_dist[0],p=a_dist[0])
+        a = np.argmax(a_dist == a)
+
+        # idea: for testing maybe try just selecting the argmax
   
-        return action
+        return "C" if a == 0 else "D"
 
     def react(self, state_ind):
         '''
@@ -101,6 +116,7 @@ class RL_agent():
             to be toggled
         '''
         # update the state
+        self.state = np.zeros((1, self.input_dim))
         self.state[0, 0] = self.prev_coop
         self.state[0, state_ind+1] = 1
 

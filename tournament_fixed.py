@@ -128,7 +128,6 @@ def main(args):
     for k in agents.keys():
         p = agents[k]
 
-    #import pdb; pdb.set_trace();
     ep_id = 0 # episode ID (for training purposes)
     for i in range(len(names)):
         for j in range(i+1,len(names)):

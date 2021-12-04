@@ -274,8 +274,6 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
     
     header()
 
-    #import pdb; pdb.set_trace();
-
     # create a folder for storing logs of actions
     # only do action logging for each game if in testing mode
 
@@ -296,7 +294,6 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
 
     # if trainbool, implement the training procedure here
     # here is the inspiration: https://medium.com/@hamza.emra/reinforcement-learning-with-tensorflow-2-0-cca33fead626
-    #import pdb; pdb.set_trace();
     if trainbool and (p2.name == "RL" or p1.name== "RL"):
         #print("Creating rl agent")
         ep_memory = []
@@ -318,12 +315,33 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
             with tf.GradientTape() as tape:
                 #forward pass
                 logits = rl.strategy(rl.state)
+                # a_dist = logits.numpy()
+                # Choose random action with p = action dist
+                # a = np.random.choice(a_dist[0],p=a_dist[0])
+                # a = np.argmax(a_dist == a)
+                # choose random action according to probability
+
                 a_dist = logits.numpy()
                 # Choose random action with p = action dist
                 a = np.random.choice(a_dist[0],p=a_dist[0])
                 a = np.argmax(a_dist == a)
                 loss = rl.compute_loss([a], logits)
+
+                # trim the logits to prevent exploding gradients
+                # NEVERMIND
+                # if logits == 1.0:
+                #     logits -= 0.01
+                # elif logits == 0.0:
+                #     logits += 0.01
+
+                #logits = logits[0]
+
+                # import pdb; pdb.set_trace();
+                #loss = rl.compute_loss([a], logits)*100
+            # OOPS: for some reason these gradients are still zero!!!
+            #import pdb; pdb.set_trace();
             grads = tape.gradient(loss, rl.strategy.trainable_variables)
+            # import pdb; pdb.set_trace();
             # make the choosen action
             #import pdb; pdb.set_trace();
             a1 = rl.act()
@@ -374,6 +392,7 @@ def play(p1, p2, numrounds, debug_flag, html, timestamp, episode, print_stuff=Tr
         scores.append(ep_score)
         # Discound the rewards 
         ep_memory = np.array(ep_memory)
+        #import pdb; pdb.set_trace();
         ep_memory[:,1] = discount_rewards(ep_memory[:,1])
         for grads, r in ep_memory:
             for ix,grad in enumerate(grads):

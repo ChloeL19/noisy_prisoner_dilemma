@@ -1,8 +1,14 @@
 import gym
 import random
-
+import numpy as np
 # To use this environment, be sure to type the following in terminal:
 # pip install -e prisoner_dilemma_gym
+
+
+
+
+
+
 
 class PrisonerDilemma(gym.Env):
     def __init__(self, enemy_agent=None, action_map=None, payoff=None, max_num_rounds=100, noise=0.05):
@@ -45,8 +51,9 @@ class PrisonerDilemma(gym.Env):
         self.info = {}
         self.action_map = action_map
         self.payoff = payoff
+        self.state = np.asarray([0.5, 1, 0, 0, 0])
 
-    def step(self, action):
+    def step(self, action, logit):
         '''
         Returns the updated state (the actions taken by each agent with noise).
         Returns the payoff (based on non-noisy actions)
@@ -55,7 +62,7 @@ class PrisonerDilemma(gym.Env):
         All tuples structured in the following way: (player1, player2)
         Arguments:
         - action: int, the action for player 1, either 0 or 1
-            0 is defect and 1 is cooperate
+            0 is cooperate and 1 is defect
         '''
         # calculate action for player 2 based on noisy state
         # going to attempt making the initial state (-1,-1), for RL training purposes
@@ -92,14 +99,20 @@ class PrisonerDilemma(gym.Env):
         #self.info['payoff'] = payoff_tuple
 
         self.curr_round += 1
+
+        self.state = np.asarray([logit, self.noisy_state_p2=='CC',
+                                    self.noisy_state_p2=='CD',
+                                    self.noisy_state_p2=='DC',
+                                    self.noisy_state_p2=='DD'])
+
         # return (noisy) state for player 1, reward, done, info
-        return self.noisy_numeric_state_p1, payoff_tuple, self.done, self.info
+        # self.noisy_numeric_state_p1, payoff_tuple, self.done, self.info
+        return self.state, payoff_tuple[0], self.done, self.info
 
     def reset(self):
         self.curr_round = 0
         self.done = False
-        pass
-        # return state, info (?)
+        return self.state
 
     def render(self):
         # just print stuff?

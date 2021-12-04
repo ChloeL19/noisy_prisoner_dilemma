@@ -11,14 +11,14 @@ class Simulation():
         1: {'prob': 0.01, 'CC': 0, 'CD': 1, 'DC': 0, 'DD': 1}
     }
     action_map = {
-        0: 'D',
-        1: 'C'
+        0: 'C',
+        1: 'D'
     }
     payoff = {
         'CC': (3,3),
         'CD': (0,5),
         'DC': (5,0),
-        'DD': (0,0)
+        'DD': (1,1)
     }
 
 class AutomatonAgent():
@@ -54,7 +54,7 @@ class AutomatonAgent():
             1 -> they have a history of cooperation that implies further cooperation
             0 -> they have a history of defection that implies further defection
         '''
-        action = 1 if random.random() <= self.strategy[self.curr_state]['prob'] else 0
+        action = 0 if random.random() <= self.strategy[self.curr_state]['prob'] else 1
         if end: 
             self.curr_state = 0 
         return action
